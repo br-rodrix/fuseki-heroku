@@ -1,5 +1,4 @@
 #!/bin/sh
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Run fuseki as a standalone server
+
 export FUSEKI_HOME="${FUSEKI_HOME:-$PWD}"
 
 if [ ! -e "$FUSEKI_HOME" ]
@@ -25,7 +26,7 @@ then
     fi
 
 JAR1="$FUSEKI_HOME/fuseki-server.jar"
-JAR2="$FUSEKI_HOME/jena-fuseki-*-server.jar"
+JAR2="$FUSEKI_HOME/jena-fuseki-server-*.jar"
 JAR=""
 
 for J in "$JAR1" "$JAR2"
@@ -56,6 +57,39 @@ then
     FUSEKI_HOME=`cygpath -w "$FUSEKI_HOME"`
 fi
 
+export FUSEKI_BASE="${FUSEKI_BASE:-$PWD/run}"
+
+if [ -z "$JAVA" ]
+then
+    if [ -z "$JAVA_HOME" ]
+    then
+       JAVA=$(which java)
+    else
+        JAVA=$JAVA_HOME/bin/java
+    fi
+fi
+
+if [ -z "$JAVA" ]
+then
+    (
+	echo "Cannot find a Java JDK."
+	echo "Please set either set JAVA or JAVA_HOME and put java (>=1.8) in your PATH."
+    ) 1>&2
+  exit 1
+fi
+
 JVM_ARGS=${JVM_ARGS:--Xmx1200M}
 
-exec java  $JVM_ARGS -jar "$JAR" "$@"
+exec $JAVA $JVM_ARGS -jar "$JAR" "$@"
+
+## Adding custom code to the Fuseki server:
+##
+## It is also possible to launch Fuseki using 
+##   java $JVM_ARGS -cp "$JAR" org.apache.jena.fuseki.cmd.FusekiCmd "$@"
+##
+## "exec" is optional - it simply frees up an OS process.
+## In this way, you can add custom java to the classpath:
+## 
+##   APPJAR=MyCode.jar
+##   java $JVM_ARGS -cp "$JAR:$APPJAR" org.apache.jena.fuseki.cmd.FusekiCmd "$@"
+
